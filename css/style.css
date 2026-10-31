@@ -506,13 +506,19 @@ button {
 .page-footer {
     width: min(950px, 100%);
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     gap: 15px;
     margin: 25px auto 0;
+   
+    
 }
 
-.page-footer .muted {
+.page-footer .button {
+    display: none;
+}
+
+.page-footer  {
     text-align: center;
 }
 
