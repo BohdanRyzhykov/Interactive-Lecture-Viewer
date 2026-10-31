@@ -25,6 +25,12 @@ const prevButton = document.getElementById("prev-button");
 const nextButton = document.getElementById("next-button");
 const previousSideButton = document.getElementById("previous-side-button");
 const nextSideButton = document.getElementById("next-side-button");
+const pageStage = document.getElementById("page-stage");
+const zoomInButton = document.getElementById("zoom-in-button");
+const zoomOutButton = document.getElementById("zoom-out-button");
+const resetZoomButton = document.getElementById("reset-zoom-button");
+const zoomLevelLabel = document.getElementById("zoom-level");
+
 
 const overviewButton = document.getElementById("overview-button");
 const fullOverviewButton = document.getElementById("full-overview-button");
@@ -36,6 +42,19 @@ let sections = [];
 let currentSection = 0;
 let lectureName = "My Lecture";
 let lectureMarkdown = "";
+let zoomScale = 1;
+let panX = 0;
+let panY = 0;
+let isDraggingPage = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragOriginX = 0;
+let dragOriginY = 0;
+
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 2.5;
+const ZOOM_STEP = 0.1;
+
 
 // ========================================
 // 2. LIBRARY CONFIGURATION
@@ -271,6 +290,7 @@ function showOverview() {
 // 8. PAGE READER
 // ========================================
 async function showSection(direction = "next") {
+    resetZoom();
     const section = sections[currentSection];
 
     lectureContent.classList.remove("page-turning");
@@ -344,7 +364,101 @@ changeFileButton.addEventListener("click", openFilePicker);
 fullChangeFileButton.addEventListener("click", openFilePicker);
 
 // ========================================
-// 10. KEYBOARD PAGE TURNING
+// 10. ZOOM / PAN
+// ========================================
+function updateZoom() {
+    if (!lectureContent || !zoomLevelLabel || !pageStage) return;
+
+    lectureContent.style.transform =
+        `translate(${panX}px, ${panY}px) scale(${zoomScale})`;
+    zoomLevelLabel.textContent = `${Math.round(zoomScale * 100)}%`;
+
+    pageStage.classList.toggle("is-zoomed", zoomScale > 1);
+    pageStage.classList.toggle("is-dragging", isDraggingPage);
+}
+
+function setZoom(nextScale) {
+    zoomScale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, nextScale));
+
+    if (zoomScale === 1) {
+        panX = 0;
+        panY = 0;
+    }
+
+    updateZoom();
+}
+
+function resetZoom() {
+    zoomScale = 1;
+    panX = 0;
+    panY = 0;
+    isDraggingPage = false;
+    updateZoom();
+}
+
+if (zoomInButton) {
+    zoomInButton.addEventListener("click", () => {
+        setZoom(zoomScale + ZOOM_STEP);
+    });
+}
+
+if (zoomOutButton) {
+    zoomOutButton.addEventListener("click", () => {
+        setZoom(zoomScale - ZOOM_STEP);
+    });
+}
+
+if (resetZoomButton) {
+    resetZoomButton.addEventListener("click", resetZoom);
+}
+
+// Mouse wheel zoom works only while the pointer is over the page.
+if (pageStage) {
+    pageStage.addEventListener("wheel", (event) => {
+        if (viewer.hidden) return;
+
+        event.preventDefault();
+        const direction = event.deltaY < 0 ? 1 : -1;
+        setZoom(zoomScale + direction * ZOOM_STEP);
+    }, { passive: false });
+
+    pageStage.addEventListener("pointerdown", (event) => {
+        if (zoomScale <= 1 || event.button !== 0) return;
+        if (event.target.closest("button")) return;
+
+        // Prevent accidental text selection while dragging
+        event.preventDefault();
+
+        isDraggingPage = true;
+        dragStartX = event.clientX;
+        dragStartY = event.clientY;
+        dragOriginX = panX;
+        dragOriginY = panY;
+        pageStage.setPointerCapture(event.pointerId);
+        updateZoom();
+    });
+
+    pageStage.addEventListener("pointermove", (event) => {
+        if (!isDraggingPage) return;
+
+        panX = dragOriginX + (event.clientX - dragStartX);
+        panY = dragOriginY + (event.clientY - dragStartY);
+        updateZoom();
+    });
+
+    function stopDraggingPage() {
+        if (!isDraggingPage) return;
+        isDraggingPage = false;
+        updateZoom();
+    }
+
+    pageStage.addEventListener("pointerup", stopDraggingPage);
+    pageStage.addEventListener("pointercancel", stopDraggingPage);
+    pageStage.addEventListener("lostpointercapture", stopDraggingPage);
+}
+
+// ========================================
+// 11. KEYBOARD PAGE TURNING
 // Left / Right arrows turn pages in Page Reader.
 // Ignore keyboard shortcuts while typing in an input.
 document.addEventListener("keydown", (event) => {

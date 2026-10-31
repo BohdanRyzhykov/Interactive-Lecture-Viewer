@@ -74,7 +74,15 @@
                 <div id="progress"></div>
             </div>
 
-            <div class="page-stage">
+            <div class="zoom-toolbar" aria-label="Page zoom controls">
+                <button class="zoom-button" id="zoom-out-button" type="button" title="Zoom out" aria-label="Zoom out">−</button>
+                <span id="zoom-level" class="zoom-level">100%</span>
+                <button class="zoom-button" id="zoom-in-button" type="button" title="Zoom in" aria-label="Zoom in">+</button>
+                <button class="zoom-button reset-zoom-button" id="reset-zoom-button" type="button">Reset</button>
+                <span class="zoom-hint">Scroll to zoom · Drag to move</span>
+            </div>
+
+            <div class="page-stage" id="page-stage">
                 <button class="page-side-button previous-side" id="previous-side-button"
                         aria-label="Previous page" title="Previous page">‹</button>
 

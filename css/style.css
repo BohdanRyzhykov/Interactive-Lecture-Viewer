@@ -510,16 +510,14 @@ button {
     align-items: center;
     gap: 15px;
     margin: 25px auto 0;
-   
-    
 }
 
-.page-footer .button {
-    display: none;
-}
-
-.page-footer  {
+.page-footer .muted {
     text-align: center;
+}
+
+.page-footer .button{
+    display: none;
 }
 
 /* =========================================
@@ -612,4 +610,91 @@ button {
         order: 3;
         width: 100%;
     }
+}
+
+
+/* =========================================
+   9. ZOOM / PAN CONTROLS
+========================================= */
+.zoom-toolbar {
+    width: min(950px, 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 0 auto 16px;
+}
+
+.zoom-button {
+    min-width: 38px;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid #444;
+    border-radius: 6px;
+    background: #292929;
+    color: #fff;
+    font-size: 18px;
+}
+
+.zoom-button:hover {
+    background: #3a3a3a;
+    border-color: #666;
+}
+
+.reset-zoom-button {
+    font-size: 13px;
+}
+
+.zoom-level {
+    min-width: 48px;
+    color: #ddd;
+    font-size: 13px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.zoom-hint {
+    margin-left: 8px;
+    color: #888;
+    font-size: 12px;
+}
+
+.page-stage {
+    overflow: hidden;
+    border-radius: 4px;
+    touch-action: pan-y;
+}
+
+.reader-page {
+    will-change: transform;
+}
+
+.page-stage.is-zoomed {
+    cursor: grab;
+    touch-action: none;
+}
+
+.page-stage.is-dragging {
+    cursor: grabbing;
+}
+
+@media (max-width: 600px) {
+    .zoom-toolbar {
+        flex-wrap: wrap;
+    }
+
+    .zoom-hint {
+        width: 100%;
+        margin: 2px 0 0;
+        text-align: center;
+    }
+}
+
+/* Prevent text selection while dragging a zoomed page */
+.page-stage.is-dragging,
+.page-stage.is-dragging * {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    cursor: grabbing !important;
 }
