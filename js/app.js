@@ -1,5 +1,8 @@
-// DOM references
+// ========================================
+// 1. DOM REFERENCES
+// ========================================
 const fileInput = document.getElementById("markdown-file");
+
 const welcome = document.getElementById("welcome");
 const fullLecture = document.getElementById("full-lecture");
 const overview = document.getElementById("overview");
@@ -20,6 +23,9 @@ const progress = document.getElementById("progress");
 
 const prevButton = document.getElementById("prev-button");
 const nextButton = document.getElementById("next-button");
+const previousSideButton = document.getElementById("previous-side-button");
+const nextSideButton = document.getElementById("next-side-button");
+
 const overviewButton = document.getElementById("overview-button");
 const fullOverviewButton = document.getElementById("full-overview-button");
 const readFullLectureButton = document.getElementById("read-full-lecture-button");
@@ -31,12 +37,20 @@ let currentSection = 0;
 let lectureName = "My Lecture";
 let lectureMarkdown = "";
 
-// Mermaid configuration
+// ========================================
+// 2. LIBRARY CONFIGURATION
+// ========================================
 if (window.mermaid) {
-    mermaid.initialize({ startOnLoad: false, theme: "default", securityLevel: "strict" });
+    mermaid.initialize({
+        startOnLoad: false,
+        theme: "default",
+        securityLevel: "strict"
+    });
 }
 
-// Load a Markdown file. Full Lecture is the default screen after upload.
+// ========================================
+// 3. FILE UPLOAD
+// ========================================
 fileInput.addEventListener("change", async () => {
     const file = fileInput.files[0];
     if (!file) return;
@@ -46,7 +60,7 @@ fileInput.addEventListener("change", async () => {
     sections = splitIntoSections(lectureMarkdown);
     currentSection = 0;
 
-    if (!sections.length) {
+    if (sections.length === 0) {
         alert("The Markdown file is empty.");
         return;
     }
@@ -56,10 +70,15 @@ fileInput.addEventListener("change", async () => {
     showFullLecture();
 });
 
-// Each level-2 heading starts a section. Text before the first H2 is Introduction.
+// ========================================
+// 4. SPLIT MARKDOWN INTO READER PAGES
+// Each H2 heading starts a new page.
+// Text before the first H2 is the introduction page.
+// ========================================
 function splitIntoSections(markdown) {
     const lines = markdown.split(/\r?\n/);
     const result = [];
+
     let title = "Introduction";
     let content = [];
     let foundH2 = false;
@@ -67,8 +86,12 @@ function splitIntoSections(markdown) {
     for (const line of lines) {
         if (/^##\s+/.test(line)) {
             if (content.join("\n").trim()) {
-                result.push({ title, content: content.join("\n") });
+                result.push({
+                    title,
+                    content: content.join("\n")
+                });
             }
+
             title = line.replace(/^##\s+/, "").trim();
             content = [line];
             foundH2 = true;
@@ -78,17 +101,25 @@ function splitIntoSections(markdown) {
     }
 
     if (content.join("\n").trim()) {
-        result.push({ title, content: content.join("\n") });
+        result.push({
+            title,
+            content: content.join("\n")
+        });
     }
 
     if (!foundH2 && result.length === 0 && markdown.trim()) {
-        result.push({ title: "Full lecture", content: markdown });
+        result.push({
+            title: "Full lecture",
+            content: markdown
+        });
     }
 
     return result;
 }
 
-// Render KaTeX and Mermaid inside a rendered Markdown container.
+// ========================================
+// 5. RENDER KATEX AND MERMAID
+// ========================================
 async function renderRichContent(container) {
     if (window.renderMathInElement) {
         renderMathInElement(container, {
@@ -101,8 +132,9 @@ async function renderRichContent(container) {
         });
     }
 
-    const blocks = container.querySelectorAll("pre code.language-mermaid");
-    blocks.forEach((code) => {
+    const mermaidBlocks = container.querySelectorAll("pre code.language-mermaid");
+
+    mermaidBlocks.forEach((code) => {
         const diagram = document.createElement("div");
         diagram.className = "mermaid";
         diagram.textContent = code.textContent;
@@ -110,7 +142,8 @@ async function renderRichContent(container) {
     });
 
     const diagrams = container.querySelectorAll(".mermaid");
-    if (diagrams.length && window.mermaid) {
+
+    if (diagrams.length > 0 && window.mermaid) {
         try {
             await mermaid.run({ nodes: diagrams });
         } catch (error) {
@@ -119,10 +152,13 @@ async function renderRichContent(container) {
     }
 }
 
-// FULL LECTURE MODE
+// ========================================
+// 6. FULL LECTURE MODE
+// ========================================
 async function renderFullLecture() {
     fullLectureTitle.textContent = lectureName;
-    fullLectureMeta.textContent = `${sections.length} sections`;
+    fullLectureMeta.textContent = `${sections.length} pages in this lecture`;
+
     fullLectureContent.innerHTML = marked.parse(lectureMarkdown);
     await renderRichContent(fullLectureContent);
 }
@@ -135,7 +171,9 @@ function showFullLecture() {
     window.scrollTo(0, 0);
 }
 
-// OVERVIEW MODE
+// ========================================
+// 7. OVERVIEW MODE
+// ========================================
 function detectSectionType(content) {
     if (/```mermaid[\s\S]*?```/i.test(content)) return "DIAGRAM";
     if (/\$\$[\s\S]*?\$\$/.test(content) || /\\\[([\s\S]*?)\\\]/.test(content)) return "FORMULA";
@@ -173,7 +211,7 @@ function createCardVisual(type) {
 
 function createOverview() {
     overviewTitle.textContent = lectureName;
-    overviewCount.textContent = `${sections.length} sections in this lecture`;
+    overviewCount.textContent = `${sections.length} pages in this lecture`;
     sectionsGrid.innerHTML = "";
 
     sections.forEach((section, index) => {
@@ -206,13 +244,15 @@ function createOverview() {
             .replace(/\s+/g, " ")
             .trim();
 
-        description.textContent = preview.slice(0, 110) + (preview.length > 110 ? "..." : "");
+        description.textContent =
+            preview.slice(0, 110) + (preview.length > 110 ? "..." : "");
 
         card.append(number, visual, typeLabel, title, description);
+
         card.addEventListener("click", async () => {
             currentSection = index;
             showReader();
-            await showSection();
+            await showSection("next");
         });
 
         sectionsGrid.appendChild(card);
@@ -227,16 +267,36 @@ function showOverview() {
     window.scrollTo(0, 0);
 }
 
-// SECTION READER MODE
-async function showSection() {
+// ========================================
+// 8. PAGE READER
+// ========================================
+async function showSection(direction = "next") {
     const section = sections[currentSection];
+
+    lectureContent.classList.remove("page-turning");
+
+    // Short visual transition when turning pages.
+    if (direction === "next") {
+        lectureContent.classList.add("page-turning");
+    } else if (direction === "previous") {
+        lectureContent.classList.add("page-turning");
+    }
+
     sectionTitle.textContent = section.title;
-    lectureContent.innerHTML = marked.parse(section.content);
     sectionCounter.textContent = `${currentSection + 1} / ${sections.length}`;
     progress.style.width = `${((currentSection + 1) / sections.length) * 100}%`;
+
     prevButton.disabled = currentSection === 0;
     nextButton.disabled = currentSection === sections.length - 1;
+    previousSideButton.disabled = currentSection === 0;
+    nextSideButton.disabled = currentSection === sections.length - 1;
+
+    lectureContent.innerHTML = marked.parse(section.content);
     await renderRichContent(lectureContent);
+
+    requestAnimationFrame(() => {
+        lectureContent.classList.remove("page-turning");
+    });
 }
 
 function showReader() {
@@ -247,22 +307,29 @@ function showReader() {
     window.scrollTo(0, 0);
 }
 
-// BUTTON EVENTS
-prevButton.addEventListener("click", async () => {
-    if (currentSection > 0) {
-        currentSection--;
-        await showSection();
-        window.scrollTo(0, 0);
-    }
-});
+async function goToPreviousPage() {
+    if (currentSection <= 0) return;
 
-nextButton.addEventListener("click", async () => {
-    if (currentSection < sections.length - 1) {
-        currentSection++;
-        await showSection();
-        window.scrollTo(0, 0);
-    }
-});
+    currentSection--;
+    await showSection("previous");
+    window.scrollTo(0, 0);
+}
+
+async function goToNextPage() {
+    if (currentSection >= sections.length - 1) return;
+
+    currentSection++;
+    await showSection("next");
+    window.scrollTo(0, 0);
+}
+
+// ========================================
+// 9. BUTTON EVENTS
+// ========================================
+prevButton.addEventListener("click", goToPreviousPage);
+previousSideButton.addEventListener("click", goToPreviousPage);
+nextButton.addEventListener("click", goToNextPage);
+nextSideButton.addEventListener("click", goToNextPage);
 
 overviewButton.addEventListener("click", showOverview);
 fullOverviewButton.addEventListener("click", showOverview);
@@ -275,3 +342,26 @@ function openFilePicker() {
 
 changeFileButton.addEventListener("click", openFilePicker);
 fullChangeFileButton.addEventListener("click", openFilePicker);
+
+// ========================================
+// 10. KEYBOARD PAGE TURNING
+// Left / Right arrows turn pages in Page Reader.
+// Ignore keyboard shortcuts while typing in an input.
+document.addEventListener("keydown", (event) => {
+    if (viewer.hidden) return;
+
+    const tagName = event.target.tagName;
+    if (tagName === "INPUT" || tagName === "TEXTAREA" || event.target.isContentEditable) {
+        return;
+    }
+
+    if (event.key === "ArrowRight") {
+        event.preventDefault();
+        goToNextPage();
+    }
+
+    if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        goToPreviousPage();
+    }
+});

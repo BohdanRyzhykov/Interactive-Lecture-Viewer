@@ -1,66 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interactive Lecture Viewer</title>
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Lecture Viewer</title>
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
 </head>
 <body>
-<header class="header">
-  <h1>Interactive Lecture Viewer</h1>
-  <p>Interactive learning experience</p>
-</header>
-<main class="main">
-  <section class="welcome" id="welcome">
-    <h2>Upload your lecture</h2>
-    <p>Select a Markdown file to start learning.</p>
-    <label class="file-label" for="markdown-file">Choose Markdown file</label>
-    <input type="file" id="markdown-file" accept=".md,.markdown,text/markdown">
-  </section>
+    <header class="header">
+        <h1>Interactive Lecture Viewer</h1>
+        <p>Interactive learning experience</p>
+    </header>
 
-  <section id="full-lecture" class="full-lecture" hidden>
-    <div class="mode-header">
-      <div><p class="eyebrow">FULL LECTURE</p><h2 id="full-lecture-title"></h2><p id="full-lecture-meta" class="muted"></p></div>
-      <div class="header-actions">
-        <button class="button secondary" id="full-overview-button">Overview</button>
-        <button class="button secondary" id="full-change-file-button">Open another</button>
-      </div>
-    </div>
-    <article id="full-lecture-content" class="lecture-content full-lecture-content"></article>
-  </section>
+    <main class="main">
+        <!-- Upload -->
+        <section class="welcome" id="welcome">
+            <div class="upload-icon">＋</div>
+            <h2>Upload your lecture</h2>
+            <p>Select a Markdown file to start learning.</p>
+            <label class="file-label" for="markdown-file">Choose Markdown file</label>
+            <input type="file" id="markdown-file" accept=".md,.markdown,text/markdown">
+            <p class="upload-hint">Supported formats: .md, .markdown</p>
+        </section>
 
-  <section id="overview" class="overview" hidden>
-    <div class="mode-header">
-      <div><p class="eyebrow">LECTURE OVERVIEW</p><h2 id="overview-title">Lecture</h2><p id="overview-count" class="muted"></p></div>
-      <div class="header-actions">
-        <button class="button primary" id="read-full-lecture-button">Read full lecture</button>
-        <button class="button secondary" id="change-file-button">Upload another</button>
-      </div>
-    </div>
-    <div id="sections-grid" class="sections-grid"></div>
-  </section>
+        <!-- Full lecture -->
+        <section id="full-lecture" class="full-lecture" hidden>
+            <div class="mode-header">
+                <div>
+                    <p class="eyebrow">FULL LECTURE</p>
+                    <h2 id="full-lecture-title"></h2>
+                    <p id="full-lecture-meta" class="muted"></p>
+                </div>
+                <div class="header-actions">
+                    <button class="button secondary" id="full-overview-button">Overview</button>
+                    <button class="button secondary" id="full-change-file-button">Open another</button>
+                </div>
+            </div>
+            <article id="full-lecture-content" class="lecture-content full-lecture-content"></article>
+        </section>
 
-  <section id="viewer" class="viewer" hidden>
-    <div class="reader-toolbar">
-      <button class="button secondary" id="overview-button">← Overview</button>
-      <div class="reader-heading"><p class="eyebrow">SECTION READER</p><h2 id="section-title"></h2></div>
-      <span id="section-counter" class="counter"></span>
-    </div>
-    <div class="progress-bar"><div id="progress"></div></div>
-    <article id="lecture-content" class="lecture-content reader-page"></article>
-    <div class="navigation">
-      <button class="button secondary" id="prev-button" disabled>← Previous</button>
-      <button class="button primary" id="next-button">Next →</button>
-    </div>
-  </section>
-</main>
+        <!-- Overview -->
+        <section id="overview" class="overview" hidden>
+            <div class="mode-header">
+                <div>
+                    <p class="eyebrow">LECTURE OVERVIEW</p>
+                    <h2 id="overview-title">Lecture</h2>
+                    <p id="overview-count" class="muted"></p>
+                </div>
+                <div class="header-actions">
+                    <button class="button primary" id="read-full-lecture-button">Read full lecture</button>
+                    <button class="button secondary" id="change-file-button">Upload another</button>
+                </div>
+            </div>
+            <div id="sections-grid" class="sections-grid"></div>
+        </section>
 
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-<script src="js/app.js"></script>
+        <!-- Page reader -->
+        <section id="viewer" class="viewer" hidden>
+            <div class="reader-toolbar">
+                <button class="button secondary" id="overview-button">← Overview</button>
+
+                <div class="reader-heading">
+                    <p class="eyebrow">PAGE READER</p>
+                    <h2 id="section-title"></h2>
+                </div>
+
+                <span id="section-counter" class="counter"></span>
+            </div>
+
+            <div class="progress-bar">
+                <div id="progress"></div>
+            </div>
+
+            <div class="page-stage">
+                <button class="page-side-button previous-side" id="previous-side-button"
+                        aria-label="Previous page" title="Previous page">‹</button>
+
+                <article id="lecture-content" class="lecture-content reader-page"></article>
+
+                <button class="page-side-button next-side" id="next-side-button"
+                        aria-label="Next page" title="Next page">›</button>
+            </div>
+
+            <div class="page-footer">
+                <button class="button secondary" id="prev-button" disabled>← Previous</button>
+                <span id="page-hint" class="muted">Use ← and → arrow keys to turn pages</span>
+                <button class="button primary" id="next-button">Next →</button>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
