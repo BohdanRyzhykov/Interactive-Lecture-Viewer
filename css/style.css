@@ -506,7 +506,7 @@ button {
 .page-footer {
     width: min(950px, 100%);
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
     gap: 15px;
     margin: 25px auto 0;
@@ -514,10 +514,6 @@ button {
 
 .page-footer .muted {
     text-align: center;
-}
-
-.page-footer .button{
-    display: none;
 }
 
 /* =========================================
@@ -690,11 +686,27 @@ button {
     }
 }
 
-/* Prevent text selection while dragging a zoomed page */
+
+/* Prevent accidental text highlighting while dragging a zoomed page */
 .page-stage.is-dragging,
 .page-stage.is-dragging * {
     user-select: none;
     -webkit-user-select: none;
     -moz-user-select: none;
     cursor: grabbing !important;
+}
+
+
+/* Invisible measurement page used by automatic pagination */
+.pagination-measure {
+    position: fixed !important;
+    top: 0 !important;
+    left: -10000px !important;
+    z-index: -1 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+    transform: none !important;
 }

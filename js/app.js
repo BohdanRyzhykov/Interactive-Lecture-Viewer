@@ -25,12 +25,12 @@ const prevButton = document.getElementById("prev-button");
 const nextButton = document.getElementById("next-button");
 const previousSideButton = document.getElementById("previous-side-button");
 const nextSideButton = document.getElementById("next-side-button");
+
 const pageStage = document.getElementById("page-stage");
 const zoomInButton = document.getElementById("zoom-in-button");
 const zoomOutButton = document.getElementById("zoom-out-button");
 const resetZoomButton = document.getElementById("reset-zoom-button");
 const zoomLevelLabel = document.getElementById("zoom-level");
-
 
 const overviewButton = document.getElementById("overview-button");
 const fullOverviewButton = document.getElementById("full-overview-button");
@@ -39,9 +39,11 @@ const changeFileButton = document.getElementById("change-file-button");
 const fullChangeFileButton = document.getElementById("full-change-file-button");
 
 let sections = [];
-let currentSection = 0;
+let readerPages = [];
+let currentPage = 0;
 let lectureName = "My Lecture";
 let lectureMarkdown = "";
+
 let zoomScale = 1;
 let panX = 0;
 let panY = 0;
@@ -54,7 +56,6 @@ let dragOriginY = 0;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 2.5;
 const ZOOM_STEP = 0.1;
-
 
 // ========================================
 // 2. LIBRARY CONFIGURATION
@@ -77,7 +78,7 @@ fileInput.addEventListener("change", async () => {
     lectureMarkdown = await file.text();
     lectureName = file.name.replace(/\.(md|markdown)$/i, "");
     sections = splitIntoSections(lectureMarkdown);
-    currentSection = 0;
+    currentPage = 0;
 
     if (sections.length === 0) {
         alert("The Markdown file is empty.");
@@ -86,13 +87,16 @@ fileInput.addEventListener("change", async () => {
 
     createOverview();
     await renderFullLecture();
+
+    // Build actual reader pages from the content of each section.
+    readerPages = await paginateLecture(sections);
+
     showFullLecture();
 });
 
 // ========================================
-// 4. SPLIT MARKDOWN INTO READER PAGES
-// Each H2 heading starts a new page.
-// Text before the first H2 is the introduction page.
+// 4. SPLIT MARKDOWN INTO OVERVIEW SECTIONS
+// Every H2 heading starts a new overview section.
 // ========================================
 function splitIntoSections(markdown) {
     const lines = markdown.split(/\r?\n/);
@@ -105,10 +109,7 @@ function splitIntoSections(markdown) {
     for (const line of lines) {
         if (/^##\s+/.test(line)) {
             if (content.join("\n").trim()) {
-                result.push({
-                    title,
-                    content: content.join("\n")
-                });
+                result.push({ title, content: content.join("\n") });
             }
 
             title = line.replace(/^##\s+/, "").trim();
@@ -120,17 +121,11 @@ function splitIntoSections(markdown) {
     }
 
     if (content.join("\n").trim()) {
-        result.push({
-            title,
-            content: content.join("\n")
-        });
+        result.push({ title, content: content.join("\n") });
     }
 
     if (!foundH2 && result.length === 0 && markdown.trim()) {
-        result.push({
-            title: "Full lecture",
-            content: markdown
-        });
+        result.push({ title: "Full lecture", content: markdown });
     }
 
     return result;
@@ -176,7 +171,7 @@ async function renderRichContent(container) {
 // ========================================
 async function renderFullLecture() {
     fullLectureTitle.textContent = lectureName;
-    fullLectureMeta.textContent = `${sections.length} pages in this lecture`;
+    fullLectureMeta.textContent = `${sections.length} sections`;
 
     fullLectureContent.innerHTML = marked.parse(lectureMarkdown);
     await renderRichContent(fullLectureContent);
@@ -191,7 +186,88 @@ function showFullLecture() {
 }
 
 // ========================================
-// 7. OVERVIEW MODE
+// 7. AUTOMATIC PAGINATION
+// Each overview section may become several reader pages.
+// Blocks such as headings, paragraphs, code, lists and
+// tables are kept together whenever they fit on a page.
+// ========================================
+function getReaderPageDimensions() {
+    if (window.innerWidth <= 600) {
+        return { height: 600, width: Math.max(280, window.innerWidth - 28) };
+    }
+
+    if (window.innerWidth <= 850) {
+        return { height: 700, width: Math.max(320, window.innerWidth - 48) };
+    }
+
+    return { height: 900, width: Math.min(950, window.innerWidth - 48) };
+}
+
+async function paginateLecture(sourceSections) {
+    const pages = [];
+    const dimensions = getReaderPageDimensions();
+
+    // Temporary invisible page with the same dimensions and styles as Reader.
+    const measurePage = document.createElement("article");
+    measurePage.className = "lecture-content reader-page pagination-measure";
+    measurePage.style.width = `${dimensions.width}px`;
+    measurePage.style.height = `${dimensions.height}px`;
+    measurePage.style.minHeight = "0";
+    measurePage.style.overflow = "hidden";
+    document.body.appendChild(measurePage);
+
+    for (let sectionIndex = 0; sectionIndex < sourceSections.length; sectionIndex++) {
+        const section = sourceSections[sectionIndex];
+
+        // Parse the whole section first so KaTeX and Mermaid are measured correctly.
+        const renderedSection = document.createElement("div");
+        renderedSection.innerHTML = marked.parse(section.content);
+        await renderRichContent(renderedSection);
+
+        const blocks = Array.from(renderedSection.children);
+        let currentBlocks = [];
+
+        function saveCurrentPage() {
+            if (currentBlocks.length === 0) return;
+
+            pages.push({
+                sectionIndex,
+                sectionTitle: section.title,
+                title: pages.filter(page => page.sectionIndex === sectionIndex).length === 0
+                    ? section.title
+                    : `${section.title} (continued)`,
+                html: currentBlocks.map(block => block.outerHTML).join("")
+            });
+
+            currentBlocks = [];
+            measurePage.innerHTML = "";
+        }
+
+        for (const block of blocks) {
+            const clone = block.cloneNode(true);
+            measurePage.appendChild(clone);
+
+            // If this block makes the page overflow, move it to a new page.
+            // A single very tall block is kept intact rather than split in the middle.
+            if (measurePage.scrollHeight > measurePage.clientHeight && currentBlocks.length > 0) {
+                measurePage.removeChild(clone);
+                saveCurrentPage();
+                measurePage.appendChild(clone);
+            }
+
+            currentBlocks.push(block);
+        }
+
+        saveCurrentPage();
+        measurePage.innerHTML = "";
+    }
+
+    measurePage.remove();
+    return pages;
+}
+
+// ========================================
+// 8. OVERVIEW MODE
 // ========================================
 function detectSectionType(content) {
     if (/```mermaid[\s\S]*?```/i.test(content)) return "DIAGRAM";
@@ -230,7 +306,7 @@ function createCardVisual(type) {
 
 function createOverview() {
     overviewTitle.textContent = lectureName;
-    overviewCount.textContent = `${sections.length} pages in this lecture`;
+    overviewCount.textContent = `${sections.length} sections in this lecture`;
     sectionsGrid.innerHTML = "";
 
     sections.forEach((section, index) => {
@@ -269,9 +345,10 @@ function createOverview() {
         card.append(number, visual, typeLabel, title, description);
 
         card.addEventListener("click", async () => {
-            currentSection = index;
+            const firstPageIndex = readerPages.findIndex(page => page.sectionIndex === index);
+            currentPage = Math.max(0, firstPageIndex);
             showReader();
-            await showSection("next");
+            await showPage("next");
         });
 
         sectionsGrid.appendChild(card);
@@ -287,31 +364,30 @@ function showOverview() {
 }
 
 // ========================================
-// 8. PAGE READER
+// 9. PAGE READER
 // ========================================
-async function showSection(direction = "next") {
+async function showPage(direction = "next") {
+    if (readerPages.length === 0) return;
+
     resetZoom();
-    const section = sections[currentSection];
+
+    const page = readerPages[currentPage];
 
     lectureContent.classList.remove("page-turning");
-
-    // Short visual transition when turning pages.
-    if (direction === "next") {
-        lectureContent.classList.add("page-turning");
-    } else if (direction === "previous") {
+    if (direction === "next" || direction === "previous") {
         lectureContent.classList.add("page-turning");
     }
 
-    sectionTitle.textContent = section.title;
-    sectionCounter.textContent = `${currentSection + 1} / ${sections.length}`;
-    progress.style.width = `${((currentSection + 1) / sections.length) * 100}%`;
+    sectionTitle.textContent = page.title;
+    sectionCounter.textContent = `${currentPage + 1} / ${readerPages.length}`;
+    progress.style.width = `${((currentPage + 1) / readerPages.length) * 100}%`;
 
-    prevButton.disabled = currentSection === 0;
-    nextButton.disabled = currentSection === sections.length - 1;
-    previousSideButton.disabled = currentSection === 0;
-    nextSideButton.disabled = currentSection === sections.length - 1;
+    prevButton.disabled = currentPage === 0;
+    nextButton.disabled = currentPage === readerPages.length - 1;
+    previousSideButton.disabled = currentPage === 0;
+    nextSideButton.disabled = currentPage === readerPages.length - 1;
 
-    lectureContent.innerHTML = marked.parse(section.content);
+    lectureContent.innerHTML = page.html;
     await renderRichContent(lectureContent);
 
     requestAnimationFrame(() => {
@@ -328,40 +404,20 @@ function showReader() {
 }
 
 async function goToPreviousPage() {
-    if (currentSection <= 0) return;
+    if (currentPage <= 0) return;
 
-    currentSection--;
-    await showSection("previous");
+    currentPage--;
+    await showPage("previous");
     window.scrollTo(0, 0);
 }
 
 async function goToNextPage() {
-    if (currentSection >= sections.length - 1) return;
+    if (currentPage >= readerPages.length - 1) return;
 
-    currentSection++;
-    await showSection("next");
+    currentPage++;
+    await showPage("next");
     window.scrollTo(0, 0);
 }
-
-// ========================================
-// 9. BUTTON EVENTS
-// ========================================
-prevButton.addEventListener("click", goToPreviousPage);
-previousSideButton.addEventListener("click", goToPreviousPage);
-nextButton.addEventListener("click", goToNextPage);
-nextSideButton.addEventListener("click", goToNextPage);
-
-overviewButton.addEventListener("click", showOverview);
-fullOverviewButton.addEventListener("click", showOverview);
-readFullLectureButton.addEventListener("click", showFullLecture);
-
-function openFilePicker() {
-    fileInput.value = "";
-    fileInput.click();
-}
-
-changeFileButton.addEventListener("click", openFilePicker);
-fullChangeFileButton.addEventListener("click", openFilePicker);
 
 // ========================================
 // 10. ZOOM / PAN
@@ -397,22 +453,17 @@ function resetZoom() {
 }
 
 if (zoomInButton) {
-    zoomInButton.addEventListener("click", () => {
-        setZoom(zoomScale + ZOOM_STEP);
-    });
+    zoomInButton.addEventListener("click", () => setZoom(zoomScale + ZOOM_STEP));
 }
 
 if (zoomOutButton) {
-    zoomOutButton.addEventListener("click", () => {
-        setZoom(zoomScale - ZOOM_STEP);
-    });
+    zoomOutButton.addEventListener("click", () => setZoom(zoomScale - ZOOM_STEP));
 }
 
 if (resetZoomButton) {
     resetZoomButton.addEventListener("click", resetZoom);
 }
 
-// Mouse wheel zoom works only while the pointer is over the page.
 if (pageStage) {
     pageStage.addEventListener("wheel", (event) => {
         if (viewer.hidden) return;
@@ -426,9 +477,7 @@ if (pageStage) {
         if (zoomScale <= 1 || event.button !== 0) return;
         if (event.target.closest("button")) return;
 
-        // Prevent accidental text selection while dragging
         event.preventDefault();
-
         isDraggingPage = true;
         dragStartX = event.clientX;
         dragStartY = event.clientY;
@@ -458,9 +507,28 @@ if (pageStage) {
 }
 
 // ========================================
-// 11. KEYBOARD PAGE TURNING
-// Left / Right arrows turn pages in Page Reader.
-// Ignore keyboard shortcuts while typing in an input.
+// 11. BUTTON EVENTS
+// ========================================
+prevButton.addEventListener("click", goToPreviousPage);
+previousSideButton.addEventListener("click", goToPreviousPage);
+nextButton.addEventListener("click", goToNextPage);
+nextSideButton.addEventListener("click", goToNextPage);
+
+overviewButton.addEventListener("click", showOverview);
+fullOverviewButton.addEventListener("click", showOverview);
+readFullLectureButton.addEventListener("click", showFullLecture);
+
+function openFilePicker() {
+    fileInput.value = "";
+    fileInput.click();
+}
+
+changeFileButton.addEventListener("click", openFilePicker);
+fullChangeFileButton.addEventListener("click", openFilePicker);
+
+// ========================================
+// 12. KEYBOARD PAGE TURNING
+// ========================================
 document.addEventListener("keydown", (event) => {
     if (viewer.hidden) return;
 
@@ -477,5 +545,9 @@ document.addEventListener("keydown", (event) => {
     if (event.key === "ArrowLeft") {
         event.preventDefault();
         goToPreviousPage();
+    }
+
+    if (event.key === "Escape" && zoomScale > 1) {
+        resetZoom();
     }
 });
