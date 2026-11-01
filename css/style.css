@@ -412,6 +412,16 @@ button {
     height: auto;
 }
 
+#export-pdf {
+    background-color: #3c10db;
+    color: rgb(241, 237, 237);
+    border: none;
+}   
+
+#export-pdf:hover {
+    background-color: #c1121f;
+}
+
 /* =========================================
    7. PAGE READER
 ========================================= */
@@ -686,7 +696,6 @@ button {
     }
 }
 
-
 /* Prevent accidental text highlighting while dragging a zoomed page */
 .page-stage.is-dragging,
 .page-stage.is-dragging * {
@@ -710,3 +719,71 @@ button {
     overflow: hidden !important;
     transform: none !important;
 }
+
+@page {
+    size: A4;
+    margin: 18mm;
+}
+
+@media print {
+    body {
+        background: rgb(250, 249, 249) !important;
+        color: black !important;
+    }
+
+    body.printing-lecture #welcome,
+    body.printing-lecture #overview,
+    body.printing-lecture #viewer,
+    body.printing-lecture .header {
+        display: none !important;
+    }
+
+    body.printing-lecture #full-lecture,
+    body.printing-lecture #full-lecture[hidden] {
+        display: block !important;
+    }
+
+    body.printing-lecture #full-lecture .mode-header {
+        display: none !important;
+    }
+
+    body.printing-lecture .full-lecture-content {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+    }
+
+    body.printing-lecture .lecture-content {
+        color: black !important;
+        font-size: 11pt;
+        line-height: 1.5;
+    }
+
+    body.printing-lecture pre {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+
+    body.printing-lecture table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    body.printing-lecture h1,
+    body.printing-lecture h2,
+    body.printing-lecture h3 {
+        break-after: avoid;
+    }
+
+    body.printing-lecture pre,
+    body.printing-lecture table,
+    body.printing-lecture img,
+    body.printing-lecture .katex-display,
+    body.printing-lecture .mermaid {
+        break-inside: avoid;
+    }
+}
+

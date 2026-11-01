@@ -38,6 +38,8 @@ const readFullLectureButton = document.getElementById("read-full-lecture-button"
 const changeFileButton = document.getElementById("change-file-button");
 const fullChangeFileButton = document.getElementById("full-change-file-button");
 
+const exportPdfButton = document.getElementById("export-pdf");
+
 let sections = [];
 let readerPages = [];
 let currentPage = 0;
@@ -550,4 +552,13 @@ document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && zoomScale > 1) {
         resetZoom();
     }
+});
+
+exportPdfButton.addEventListener("click", () => {
+    document.body.classList.add("printing-lecture");
+    window.print();
+});
+
+window.addEventListener("afterprint", () => {
+    document.body.classList.remove("printing-lecture");
 });
